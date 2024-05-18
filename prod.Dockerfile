@@ -8,11 +8,10 @@ RUN groupadd -g $PGID mygroup && \
     useradd -u $PUID -g mygroup -d /ddns -m myuser
 
 # Set the working directory in the container to /ddns-rust/src/myapp
-WORKDIR /app
 
+COPY /ddns-rust /app
 RUN chown -R myuser:mygroup /app
-# Copy the current directory contents into the container at /usr/src/myapp
-COPY . .
+WORKDIR /app
 
 # Build the application
 RUN cargo build --release
