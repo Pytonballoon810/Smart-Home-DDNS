@@ -4,8 +4,8 @@ FROM rust:latest
 ARG PGID
 ARG PUID
 
-RUN addgroup --gid $PGID mygroup && \
-    adduser -u $PUID -G mygroup -h /ddns -D myuser
+RUN groupadd -g $PGID mygroup && \
+    useradd -u $PUID -g mygroup -d /ddns -m myuser
 
 # Set the working directory in the container to /ddns-rust/src/myapp
 WORKDIR /ddns-rust/src/myapp
