@@ -10,7 +10,7 @@ RUN addgroup --gid $PGID mygroup && \
 # Set the working directory in the container to /ddns-rust/src/myapp
 WORKDIR /ddns-rust/src/myapp
 
-RUN chown -R myuser:mygroup /ddns-rust
+RUN chown -R myuser:mygroup /ddns-rust/src/myapp
 
 # Copy the current directory contents into the container at /usr/src/myapp
 COPY . .
