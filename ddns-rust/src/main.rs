@@ -6,7 +6,7 @@ use std::net::{IpAddr, Ipv4Addr};
 use std::sync::Mutex;
 use std::time;
 
-use http_body_util::{Empty, Full};
+use http_body_util::Full;
 use hyper::body::Bytes;
 use hyper::server::conn::http1;
 use hyper::service::service_fn;
