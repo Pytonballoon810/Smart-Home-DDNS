@@ -13,7 +13,6 @@ COPY /ddns-rust /app
 WORKDIR /app
 RUN chown -R myuser:mygroup /app
 
-RUN apt install build-essential
 RUN cargo build --release
 
 # Set the startup command to run your binary
