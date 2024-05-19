@@ -13,10 +13,9 @@ COPY /ddns-rust /app
 RUN chown -R myuser:mygroup /app
 WORKDIR /app
 
-# Build the application
-RUN cargo build --release
-
 USER myuser:mygroup
 
+RUN cargo build --release
+
 # Set the startup command to run your binary
-CMD cargo run
+CMD ["./target/release/ddns-rust"]

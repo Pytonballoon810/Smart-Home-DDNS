@@ -180,7 +180,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     }
 
     // web server setup
-    let port = env::var("PORT").unwrap_or(String::from("8080"));
+    let port = env::var("PORT").unwrap_or(String::from("12080"));
     let server_addr = SocketAddr::new(
         IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
         port.parse().unwrap(),
