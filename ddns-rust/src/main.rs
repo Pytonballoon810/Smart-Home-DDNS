@@ -4,7 +4,6 @@ use std::io::{Error, ErrorKind};
 use std::net::SocketAddr;
 use std::net::{IpAddr, Ipv4Addr};
 use std::sync::Mutex;
-use std::time;
 
 use http_body_util::Full;
 use hyper::body::Bytes;
@@ -22,9 +21,11 @@ use serde_json::Value;
 
 use lazy_static::lazy_static;
 
+use chrono::Local;
+
 // declare global variables
 lazy_static! {
-    pub static ref LAST_UPDATED: Mutex<time::SystemTime> = Mutex::new(time::SystemTime::now());
+    pub static ref LAST_UPDATED: Mutex<String> = Mutex::new(Local::now().format("%Y/%m/%d at %H:%M:%S").to_string());
     pub static ref LAST_IP: Mutex<String> = Mutex::new(String::from("0.0.0.0"));
 }
 
@@ -63,9 +64,12 @@ async fn handle_request(
         }
     }
 
+    println!("Received parameters: username: {}, pwd: {}, domain: {}, ip: {}", username, pwd, domain, ip);
+    // println!("Expected parameters: username: {}, pwd: {}, domain: {}", env::var("USERNAME").unwrap(), env::var("PASSWD").unwrap(), env::var("DOMAIN").unwrap());
+
     // check if the username and password are correct
-    if username != env::var("USERNAME").unwrap_or(String::from(""))
-        || pwd != env::var("PASSWD").unwrap_or(String::from(""))
+    if username != env::var("USERNAME").unwrap()
+        || pwd != env::var("PASSWD").unwrap()
     {
         return Ok(Response::new(Full::new(Bytes::from(
             "Invalid username or password",
@@ -78,16 +82,17 @@ async fn handle_request(
         println!("Request received. New IP: {}", ip);
         println!("Updating DNS record...");
 
-        _ = call_cloudflare_api(ip.parse().unwrap());
+        _ = call_cloudflare_api(ip.parse().unwrap()).await;
+
+        println!("DNS record updated successfully on {}", Local::now().format("%Y/%m/%d at %H:%M:%S").to_string());
 
         return Ok(Response::new(Full::new(Bytes::from(format!(
-            "Received. Updating DNS record at {:?}",
-            time::SystemTime::now()
+            "Received. Updating DNS record on {}",
+            Local::now().format("%Y/%m/%d at %H:%M:%S").to_string()
         )))));
     };
 }
 
-#[tokio::main]
 async fn call_cloudflare_api(new_ip: Ipv4Addr) -> Result<(), Box<dyn std::error::Error>> {
     // get environment variables
     let zone_id = env::var("ZONE_ID").unwrap();
@@ -98,9 +103,10 @@ async fn call_cloudflare_api(new_ip: Ipv4Addr) -> Result<(), Box<dyn std::error:
     };
     let api_key = env::var("API_KEY").unwrap();
     // get all DNS records from the zone corresponding to the zone_id
+    println!("Getting all DNS records from the zone...");
     let records_resp = reqwest::Client::new()
         .get(format!(
-            "https://api.cloudflare.com/client/v4/zones/{:?}/dns_records",
+            "https://api.cloudflare.com/client/v4/zones/{}/dns_records",
             &zone_id
         ))
         .header("Content-Type", "application/json")
@@ -111,8 +117,11 @@ async fn call_cloudflare_api(new_ip: Ipv4Addr) -> Result<(), Box<dyn std::error:
         .text()
         .await;
     // get the record_id of the A record corresponding to the a_record_name from the records list
-    let record_id = get_id_from_dns_record_list(&a_record_name, &records_resp.unwrap()).await?;
+    let records_resp_unwraped = records_resp.unwrap_or(("No response found").to_string());
+    println!("Response: {}", records_resp_unwraped);
+    let record_id = get_id_from_dns_record_list(&a_record_name, &records_resp_unwraped).await?;
     // update the A record with the new IP
+    println!("Updating the A record with the new IP...");
     let update_dns_record_resp = reqwest::Client::new()
         .patch(format!(
             "https://api.cloudflare.com/client/v4/zones/{}/dns_records/{}",
@@ -124,14 +133,14 @@ async fn call_cloudflare_api(new_ip: Ipv4Addr) -> Result<(), Box<dyn std::error:
             "{{
             \"content\": \"{new_ip}\",
             \"name\": \"{a_record_name}\",
-            \"proxied\": {:?},
+            \"proxied\": {},
             \"type\": \"A\",
-            \"comment\": \"Updated by ddns-rust on {:?}\",
+            \"comment\": \"Updated by ddns-rust on {}\",
             \"tags\": [],
             \"ttl\": 1
         }}",
             env::var("PROXIED").unwrap_or(String::from("false")),
-            time::SystemTime::now()
+            Local::now().format("%Y/%m/%d at %H:%M:%S").to_string()
         ))
         .send()
         .await
@@ -149,7 +158,7 @@ async fn call_cloudflare_api(new_ip: Ipv4Addr) -> Result<(), Box<dyn std::error:
 
 fn update_last_updated() {
     let mut last_updated = LAST_UPDATED.lock().unwrap();
-    *last_updated = time::SystemTime::now();
+    *last_updated = Local::now().format("%Y/%m/%d at %H:%M:%S").to_string();
 }
 
 async fn get_id_from_dns_record_list(name: &str, response: &str) -> Result<String, Error> {
@@ -187,6 +196,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     );
 
     let listener = TcpListener::bind(server_addr).await?;
+    println!("Server listening on: {:?}", server_addr);
 
     loop {
         let (stream, _) = listener.accept().await?;
