@@ -10,12 +10,12 @@ RUN groupadd -g $PGID mygroup && \
 # Set the working directory in the container to /ddns-rust/src/myapp
 
 COPY /ddns-rust /app
-RUN chown -R myuser:mygroup /app
 WORKDIR /app
+RUN chown -R myuser:mygroup /app
 
-USER myuser:mygroup
-
+RUN apt install build-essential
 RUN cargo build --release
 
 # Set the startup command to run your binary
+USER myuser:mygroup
 CMD ["./target/release/ddns-rust"]
