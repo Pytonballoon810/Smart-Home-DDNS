@@ -1,1 +1,0 @@
-fn(_) -> impl Future<Output = Result<(hyper::client::conn::http1::SendRequest<_>, hyper::client::conn::http1::Connection<_, _>), hyper::Error>> {hyper::client::conn::http1::handshake::<_, _>}
