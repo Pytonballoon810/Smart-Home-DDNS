@@ -35,11 +35,15 @@ async fn handle_request(
 ) -> Result<Response<Full<Bytes>>, Infallible> {
     let query = req.uri().query().unwrap_or("");
     if query == "" {
-        return Ok(Response::new(Full::new(Bytes::from(format!(
-            "No query parameters found. Last updated at {:?} with IP: {:?}",
-            *LAST_UPDATED.lock().unwrap(),
-            *LAST_IP.lock().unwrap()
-        )))));
+        if *LAST_IP.lock().unwrap() == "0.0.0.0" {
+            return Ok(Response::new(Full::new(Bytes::from("No query parameters found. Not yet updated."))));
+        }else {            
+            return Ok(Response::new(Full::new(Bytes::from(format!(
+                "No query parameters found. Last updated at {:?} with IP: {:?}",
+                *LAST_UPDATED.lock().unwrap(),
+                *LAST_IP.lock().unwrap()
+            )))));
+        }
     }
     // get the query parameters from the request url (these must be supplied by the fritzbox.)
     let params: Vec<&str> = query.split('&').collect();
